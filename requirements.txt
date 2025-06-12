@@ -1,0 +1,9 @@
+tensorflow[and-cuda]
+deepface
+faiss-cpu
+fastapi
+uvicorn
+numpy
+opencv-python
+python-multipart
+tf-keras

@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  face-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: face-grab-cpu
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./images:/app/images
+      - ./face_index.faiss:/app/face_index.faiss
+      - ./face_metadata.db:/app/face_metadata.db
+    environment:
+      - DEEPFACE_BACKEND=tensorflow  # Optional: helps clarify backend
