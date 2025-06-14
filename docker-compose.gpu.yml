@@ -4,7 +4,7 @@ services:
   face-api:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.gpu
     container_name: face-grab-gpu
     ports:
       - "8000:8000"

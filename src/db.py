@@ -42,7 +42,8 @@ def search_face(query: np.ndarray):
 
     with sqlite3.connect(DB_PATH) as conn:
         c = conn.cursor()
-        c.execute("SELECT name FROM faces WHERE id = ?", (I[0][0] + 1,))
+        offset = int(I[0][0])
+        c.execute("SELECT name FROM faces LIMIT 1 OFFSET ?", (offset,))
         row = c.fetchone()
         if row:
             logging.info(f"Match found: {row[0]} with distance {D[0][0]:.4f}")
