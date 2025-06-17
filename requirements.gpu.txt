@@ -1,4 +1,4 @@
-tensorflow[and-cuda]
+tensorflow[and-cuda]==2.12.0
 deepface
 faiss-cpu
 fastapi

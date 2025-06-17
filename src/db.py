@@ -8,7 +8,8 @@ logging.basicConfig(level=logging.INFO)
 
 DB_PATH = "face_metadata.db"
 INDEX_PATH = "face_index.faiss"
-DIM = 128  # Facenet
+DIM = 128
+THRESHOLD = 1.3
 
 # Init index if not present
 if not os.path.exists(INDEX_PATH):
@@ -35,10 +36,11 @@ def search_face(query: np.ndarray):
     logging.info("Searching for face match.")
     index = faiss.read_index(INDEX_PATH)
     D, I = index.search(np.array([query]), k=1)
+    logging.info(f"Distance: {D[0][0]}")
 
-    if len(I[0]) == 0:
+    if len(I[0]) == 0 or D[0][0] > THRESHOLD:
         logging.info("No match found in FAISS index.")
-        return "No match", float("inf")
+        return "No match", 
 
     with sqlite3.connect(DB_PATH) as conn:
         c = conn.cursor()
