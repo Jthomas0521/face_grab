@@ -12,11 +12,17 @@ services:
       - ./images:/app/images
       - ./face_index.faiss:/app/face_index.faiss
       - ./face_metadata.db:/app/face_metadata.db
-    runtime: nvidia
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
+    runtime: nvidia
+    devices:
+      - /dev/nvidiactl:/dev/nvidiactl
+      - /dev/nvidia-uvm:/dev/nvidia-uvm
+      - /dev/nvidia0:/dev/nvidia0
+    # command: python3 -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+
   tensorflow:
-    image: tensorflow/tensorflow:2.15.0-gpu
+    image: tensorflow/tensorflow:2.12.0-gpu
     restart: always
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
@@ -27,13 +33,11 @@ services:
       - app-network
     command: tail -f /dev/null
     runtime: nvidia
-    deploy:
-      resources:
-        reservations:
-          devices:
-          - driver: nvidia
-            count: all
-            capabilities: [gpu]
+    devices:
+      - /dev/nvidiactl:/dev/nvidiactl
+      - /dev/nvidia-uvm:/dev/nvidia-uvm
+      - /dev/nvidia0:/dev/nvidia0
+
 networks:
   app-network:
     driver: bridge

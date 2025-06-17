@@ -1,0 +1,10 @@
+version: "3.8"
+services:
+  test-gpu:
+    image: tensorflow/tensorflow:2.12.0-gpu
+    command: python3 -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+    runtime: nvidia
+    devices:
+      - /dev/nvidiactl:/dev/nvidiactl
+      - /dev/nvidia-uvm:/dev/nvidia-uvm
+      - /dev/nvidia0:/dev/nvidia0
