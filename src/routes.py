@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from src.logic import get_embedding
 from src.db import insert_face, search_face
 import os
@@ -20,9 +20,12 @@ async def register_face(name: str = Form(...), file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, f)
 
     embedding = get_embedding(image_path)
+    if embedding is None:
+        logging.warning(f"No face detected in image for '{name}'. Registration aborted.")
+        raise HTTPException(status_code=400, detail="No face detected in the uploaded image.")
+
     insert_face(name, embedding)
     logging.info(f"Face for '{name}' registered successfully.")
-
     return {"status": "success", "name": name}
 
 @router.post("/recognize/")
@@ -33,7 +36,10 @@ async def recognize_face(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, f)
 
     embedding = get_embedding(image_path)
+    if embedding is None:
+        logging.warning("No face detected during recognition. Aborting.")
+        raise HTTPException(status_code=400, detail="No face detected in the uploaded image.")
+
     name, distance = search_face(embedding)
     logging.info(f"Recognition result: match={name}, distance={distance}")
-
     return {"match": name, "distance": distance}

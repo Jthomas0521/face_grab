@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 DB_PATH = "face_metadata.db"
 INDEX_PATH = "face_index.faiss"
 DIM = 128
-THRESHOLD = 1.5
+THRESHOLD = 0.5
 
 # Init index if not present
 if not os.path.exists(INDEX_PATH):
@@ -18,8 +18,10 @@ if not os.path.exists(INDEX_PATH):
 else:
     logging.info(f"FAISS index found at {INDEX_PATH}.")
 
+
 def insert_face(name: str, vector: np.ndarray):
     logging.info(f"Inserting face for '{name}'.")
+
     index = faiss.read_index(INDEX_PATH)
     index.add(np.array([vector]))
     faiss.write_index(index, INDEX_PATH)
@@ -27,28 +29,51 @@ def insert_face(name: str, vector: np.ndarray):
 
     with sqlite3.connect(DB_PATH) as conn:
         c = conn.cursor()
+
         c.execute("CREATE TABLE IF NOT EXISTS faces (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)")
+        c.execute("CREATE TABLE IF NOT EXISTS face_mappings (faiss_idx INTEGER, face_id INTEGER)")
+
         c.execute("INSERT INTO faces (name) VALUES (?)", (name,))
+        face_id = c.lastrowid
+
+        faiss_idx = index.ntotal - 1
+        c.execute("INSERT INTO face_mappings (faiss_idx, face_id) VALUES (?, ?)", (faiss_idx, face_id))
+
         conn.commit()
         logging.info(f"Metadata for '{name}' inserted into database.")
 
+
 def search_face(query: np.ndarray):
     logging.info("Searching for face match.")
+
     index = faiss.read_index(INDEX_PATH)
     D, I = index.search(np.array([query]), k=1)
-    logging.info(f"Distance: {D[0][0]}")
+    distance = D[0][0]
+    faiss_idx = int(I[0][0])
 
-    if len(I[0]) == 0 or D[0][0] > THRESHOLD:
+    logging.info(f"Distance: {distance}")
+    logging.info(f"Using threshold: {THRESHOLD}")
+
+    if len(I[0]) == 0 or distance > THRESHOLD:
         logging.info("No match found in FAISS index.")
         return "No match", None
 
     with sqlite3.connect(DB_PATH) as conn:
         c = conn.cursor()
-        offset = int(I[0][0])
-        c.execute("SELECT name FROM faces LIMIT 1 OFFSET ?", (offset,))
+        c.execute("SELECT face_id FROM face_mappings WHERE faiss_idx = ?", (faiss_idx,))
+        result = c.fetchone()
+
+        if not result:
+            logging.info("Match found in FAISS, but no mapping in DB.")
+            return "Unknown", distance
+
+        face_id = result[0]
+        c.execute("SELECT name FROM faces WHERE id = ?", (face_id,))
         row = c.fetchone()
+
         if row:
-            logging.info(f"Match found: {row[0]} with distance {D[0][0]:.4f}")
+            logging.info(f"Match found: {row[0]} with distance {distance:.4f}")
+            return row[0], distance
         else:
-            logging.info("Match found in index, but no corresponding metadata in database.")
-        return (row[0] if row else "Unknown", float(D[0][0]))
+            logging.info("Mapping found, but name not found.")
+            return "Unknown", distance
