@@ -4,11 +4,15 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
-def get_embedding(image_path: str, model_name="Facenet"):
+def get_embedding(image_path: str):
     try:
-        logging.info(f"Extracting embedding for image: {image_path} using model: {model_name}")
-        result = DeepFace.represent(img_path=image_path, model_name=model_name, enforce_detection=True)[0]
-        raw_embedding = np.array(result["embedding"], dtype=np.float32)
+        logging.info(f"Extracting embedding for image: {image_path} using Deepface models")
+
+        result = DeepFace.represent(img_path=image_path, enforce_detection=True)[0]
+        
+        embeddings = [np.array(result["embedding"], dtype=np.float32) for res in results]
+        raw_embedding = np.mean(embeddings, axis=0) 
+        
         normalized_embedding = raw_embedding / np.linalg.norm(raw_embedding)
         logging.info(f"Embedding extracted for image: {image_path}")
         return normalized_embedding

@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 DB_PATH = "face_metadata.db"
 INDEX_PATH = "face_index.faiss"
 DIM = 128
-THRESHOLD = 0.5
+THRESHOLD = 1.3
 
 # Init index if not present
 if not os.path.exists(INDEX_PATH):
