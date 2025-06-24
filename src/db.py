@@ -8,21 +8,41 @@ logging.basicConfig(level=logging.INFO)
 
 DB_PATH = "face_metadata.db"
 INDEX_PATH = "face_index.faiss"
-DIM = 128
-THRESHOLD = 1.3
+DIM_PATH = "faiss_dim.txt"
+THRESHOLD = 3.5
 
-# Init index if not present
-if not os.path.exists(INDEX_PATH):
-    logging.info(f"FAISS index not found at {INDEX_PATH}. Initializing new index.")
-    faiss.write_index(faiss.IndexFlatL2(DIM), INDEX_PATH)
-else:
-    logging.info(f"FAISS index found at {INDEX_PATH}.")
+
+def _init_index(vector: np.ndarray):
+    dim = vector.shape[0]
+    logging.info(f"Initializing FAISS index with dim: {dim}")
+    index = faiss.IndexFlatL2(dim)
+    faiss.write_index(index, INDEX_PATH)
+
+    # Save dimension to file
+    with open(DIM_PATH, "w") as f:
+        f.write(str(dim))
+    return index
+
+
+def _get_index(vector: np.ndarray):
+    if not os.path.exists(INDEX_PATH):
+        return _init_index(vector)
+
+    index = faiss.read_index(INDEX_PATH)
+
+    expected_dim = vector.shape[0]
+    if index.d != expected_dim:
+        raise ValueError(f"Vector dimension {expected_dim} does not match FAISS index dimension {index.d}")
+
+    return index
 
 
 def insert_face(name: str, vector: np.ndarray):
     logging.info(f"Inserting face for '{name}'.")
 
-    index = faiss.read_index(INDEX_PATH)
+    vector = np.array(vector, dtype=np.float32)
+    index = _get_index(vector)
+
     index.add(np.array([vector]))
     faiss.write_index(index, INDEX_PATH)
     logging.info(f"Face vector added to FAISS index.")
@@ -46,7 +66,16 @@ def insert_face(name: str, vector: np.ndarray):
 def search_face(query: np.ndarray):
     logging.info("Searching for face match.")
 
+    if not os.path.exists(INDEX_PATH):
+        logging.warning("FAISS index does not exist.")
+        return "No match", None
+
     index = faiss.read_index(INDEX_PATH)
+    query = np.array(query, dtype=np.float32)
+
+    if query.shape[0] != index.d:
+        raise ValueError(f"Query dimension {query.shape[0]} does not match FAISS index dimension {index.d}")
+
     D, I = index.search(np.array([query]), k=1)
     distance = D[0][0]
     faiss_idx = int(I[0][0])

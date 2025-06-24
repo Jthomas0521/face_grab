@@ -14,7 +14,12 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/register/")
 async def register_face(name: str = Form(...), file: UploadFile = File(...)):
-    image_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}.jpg")
+    ext = os.path.splitext(file.filename)[-1].lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
+        logging.warning(f"Unsupported file type: {ext} for file '{file.filename}'")
+        raise HTTPException(status_code=400, detail="Unsupported file type. Please upload a .jpg, .jpeg, .png, or .webp image.")
+    
+    image_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}{ext}")
     logging.info(f"Registering face for '{name}'. Saving uploaded image to {image_path}")
     with open(image_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
@@ -42,4 +47,4 @@ async def recognize_face(file: UploadFile = File(...)):
 
     name, distance = search_face(embedding)
     logging.info(f"Recognition result: match={name}, distance={distance}")
-    return {"match": name, "distance": distance}
+    return {"match": name, "distance": float(distance) if distance is not None else None}

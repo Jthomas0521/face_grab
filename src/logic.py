@@ -8,9 +8,9 @@ def get_embedding(image_path: str):
     try:
         logging.info(f"Extracting embedding for image: {image_path} using Deepface models")
 
-        result = DeepFace.represent(img_path=image_path, enforce_detection=True)[0]
+        results = DeepFace.represent(img_path=image_path, enforce_detection=True)
         
-        embeddings = [np.array(result["embedding"], dtype=np.float32) for res in results]
+        embeddings = [np.array(res["embedding"], dtype=np.float32) for res in results]
         raw_embedding = np.mean(embeddings, axis=0) 
         
         normalized_embedding = raw_embedding / np.linalg.norm(raw_embedding)
